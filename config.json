@@ -1,0 +1,9 @@
+{
+    "model_dir": "/home/pablo/Programas/models",
+    "llama_server": "/home/pablo/Programas/llama.cpp/build/bin/llama-server",
+    "port": 8081,
+    "default_context": 32768,
+    "env": {
+        "HSA_OVERRIDE_GFX_VERSION": "11.0.2"
+    }
+}

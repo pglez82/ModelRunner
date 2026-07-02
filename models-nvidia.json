@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Qwen3 35B-A3B (2 GPU)",
+    "model": "Qwen_Qwen3.6-35B-A3B-Q4_K_M.gguf",
+    "gpus": "0,1",
+    "mmproj": "mmproj-B16.gguf",
+    "context": 128000,
+    "n_cpu_moe": 4
+  },
+  {
+    "name": "Gemma4 12B (GPU 0)",
+    "model": "gemma-4-12B-it-Q4_K_M.gguf",
+    "mmproj": "mmproj-gemma-4-12B-it-Q8_0.gguf",
+    "gpus": "0",
+    "context":128000
+  },
+  {
+    "name": "Gemma4 12B (GPU 1)",
+    "model": "gemma-4-12B-it-Q4_K_M.gguf",
+    "mmproj": "mmproj-gemma-4-12B-it-Q8_0.gguf",
+    "gpus": "1",
+    "context":128000
+  }
+]
