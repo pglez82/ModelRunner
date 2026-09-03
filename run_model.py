@@ -16,7 +16,7 @@ def load_config():
 def build_command(cfg, config):
     model_dir = Path(config["model_dir"])
     default_ctx = config.get("default_context", 32768)
-    default_n_cpu_moe = config.get("default_n_cpu_moe", 2)
+    default_n_cpu_moe = config.get("default_n_cpu_moe", 0)
     port = cfg.get("port", config["port"])
 
     cmd = [
@@ -32,6 +32,10 @@ def build_command(cfg, config):
 
     if "mmproj" in cfg:
         cmd += ["--mmproj", str(model_dir / cfg["mmproj"])]
+    if "model-draft" in cfg:
+        cmd += ["--model-draft", str(model_dir / cfg["model-draft"])]
+        cmd += ["--spec-type", "draft-mtp"]
+        cmd += ["--spec-draft-n-max", "4"]
 
     return cmd
 

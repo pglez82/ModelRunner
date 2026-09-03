@@ -3,14 +3,16 @@
     "name": "Gemma4 26B-A4B-QAT",
     "model": "gemma-4-26B-A4B-it-QAT-Q4_0.gguf",
     "mmproj": "mmproj-gemma-4-26B-A4B-it-QAT-BF16.gguf",
+    "model-draft": "gemma-4-26B-A4B-it-Q4_0-MTP.gguf",
     "context": 128000,
-    "port": 8082
+    "port": 8081
   },
   {
     "name": "Gemma4 26B-A4B-QAT (no images)",
     "model": "gemma-4-26B-A4B-it-QAT-Q4_0.gguf",
+    "model-draft": "gemma-4-26B-A4B-it-Q4_0-MTP.gguf",
     "context": 64000,
-    "port": 8082
+    "port": 8081
   },
   {
     "name": "Qwen3.6 35B-A3B",
@@ -20,9 +22,16 @@
     "port": 8082
   },
   {
+    "name": "Qwen3.6 35B-A3B (MTP)",
+    "model": "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
+    "context": 16000,
+    "port": 8082
+  },
+
+  {
     "name": "Quen2.5-Coder-1.5b",
     "model": "qwen2.5-coder-1.5b-q4_k_m.gguf",
     "context": 16000,
-    "port": 8082
+    "port": 8081
   }
 ]
