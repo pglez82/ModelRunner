@@ -1,9 +1,6 @@
 {
-    "model_dir": "/home/pablo/Programas/models",
-    "llama_server": "/home/pablo/Programas/llama.cpp/build/bin/llama-server",
+    "model_dir": "/home/pablo/Programas/llamamodels",
+    "llama_server": "/home/pablo/Programas/llama-gfx11-rocm-nightly-20260903-ubuntu-rocm-multiarch-x64/llama-server",
     "port": 8081,
-    "default_context": 32768,
-    "env": {
-        "HSA_OVERRIDE_GFX_VERSION": "11.0.2"
-    }
+    "default_context": 32768
 }

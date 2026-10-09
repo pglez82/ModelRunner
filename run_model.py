@@ -28,14 +28,19 @@ def build_command(cfg, config):
         "--n-cpu-moe", str(cfg.get("n_cpu_moe", default_n_cpu_moe)),
         "-c", str(cfg.get("context", default_ctx)),
         "-m", str(model_dir / cfg["model"]),
+        "-fa","on",
+        "-ctk", "q8_0",
+        "-ctv", "q8_0"
     ]
 
     if "mmproj" in cfg:
         cmd += ["--mmproj", str(model_dir / cfg["mmproj"])]
     if "model-draft" in cfg:
         cmd += ["--model-draft", str(model_dir / cfg["model-draft"])]
-        cmd += ["--spec-type", "draft-mtp"]
-        cmd += ["--spec-draft-n-max", "4"]
+
+
+    if cfg.get("mtp", False) or "model-draft" in cfg:
+        cmd += ["--spec-type", "draft-mtp", "--spec-draft-n-max", "2"]
 
     return cmd
 
