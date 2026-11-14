@@ -26,6 +26,7 @@ def build_command(cfg, config):
     default_ctx = config.get("default_context", 32768)
     default_n_cpu_moe = config.get("default_n_cpu_moe", 0)
     port = cfg.get("port", config["port"])
+    host = cfg.get("host", config.get("host", "0.0.0.0"))
     ngl = cfg.get("ngl", config.get("default_ngl", "999"))
     ctk = cfg.get("ctk", config.get("default_ctk", "q8_0"))
     ctv = cfg.get("ctv", config.get("default_ctv", "q8_0"))
@@ -35,6 +36,7 @@ def build_command(cfg, config):
         "-ngl", str(ngl),
         "-np", "1",
         "--no-mmap",
+        "--host", str(host),
         "--port", str(port),
         "--n-cpu-moe", str(cfg.get("n_cpu_moe", default_n_cpu_moe)),
         "-c", str(cfg.get("context", default_ctx)),
@@ -67,12 +69,35 @@ def main():
     args = parser.parse_args()
 
     base_dir = Path(__file__).parent
-    if args.machine:
-        config_file = base_dir / f"config-{args.machine}.json"
-        models_file = base_dir / f"models-{args.machine}.json"
+    machine = args.machine
+    if not machine:
+        if (base_dir / "config.json").exists() and (base_dir / "models.json").exists():
+            config_file = base_dir / "config.json"
+            models_file = base_dir / "models.json"
+        else:
+            available_machines = sorted([
+                p.stem.replace("models-", "")
+                for p in base_dir.glob("models-*.json")
+                if (base_dir / f"config-{p.stem.replace('models-', '')}.json").exists()
+            ])
+            if len(available_machines) == 1:
+                machine = available_machines[0]
+                config_file = base_dir / f"config-{machine}.json"
+                models_file = base_dir / f"models-{machine}.json"
+            elif available_machines:
+                print("\nMáquinas disponibles:\n")
+                for i, m in enumerate(available_machines, start=1):
+                    print(f"{i}) {m}")
+                choice = int(input("\nSelecciona máquina: "))
+                machine = available_machines[choice - 1]
+                config_file = base_dir / f"config-{machine}.json"
+                models_file = base_dir / f"models-{machine}.json"
+            else:
+                config_file = base_dir / "config.json"
+                models_file = base_dir / "models.json"
     else:
-        config_file = base_dir / "config.json"
-        models_file = base_dir / "models.json"
+        config_file = base_dir / f"config-{machine}.json"
+        models_file = base_dir / f"models-{machine}.json"
 
     config = load_config(config_file)
     models = load_models(models_file)
