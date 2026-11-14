@@ -1,36 +1,47 @@
 #!/usr/bin/env python3
 
+import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 
-CONFIG_FILE = Path(__file__).parent / "config.json"
-MODELS_FILE = Path(__file__).parent / "models.json"
-
-# Loads the global configuration from the config.json file.
-def load_config():
-    with open(CONFIG_FILE, "r") as f:
+# Loads the global configuration from the specified config file.
+def load_config(config_file):
+    if not config_file.exists():
+        sys.exit(f"Error: Configuration file not found: {config_file}")
+    with open(config_file, "r") as f:
         return json.load(f)
-    
+
+# Loads the models list from the specified models file.
+def load_models(models_file):
+    if not models_file.exists():
+        sys.exit(f"Error: Models file not found: {models_file}")
+    with open(models_file, "r") as f:
+        return json.load(f)
+
 # Builds the command to run the llama server based on the model configuration and global configuration.
 def build_command(cfg, config):
     model_dir = Path(config["model_dir"])
     default_ctx = config.get("default_context", 32768)
     default_n_cpu_moe = config.get("default_n_cpu_moe", 0)
     port = cfg.get("port", config["port"])
+    ngl = cfg.get("ngl", config.get("default_ngl", "999"))
+    ctk = cfg.get("ctk", config.get("default_ctk", "q8_0"))
+    ctv = cfg.get("ctv", config.get("default_ctv", "q8_0"))
 
     cmd = [
         config["llama_server"],
-        "-ngl", "999",
+        "-ngl", str(ngl),
         "-np", "1",
         "--no-mmap",
         "--port", str(port),
         "--n-cpu-moe", str(cfg.get("n_cpu_moe", default_n_cpu_moe)),
         "-c", str(cfg.get("context", default_ctx)),
         "-m", str(model_dir / cfg["model"]),
-        "-fa","on",
-        "-ctk", "q8_0",
-        "-ctv", "q8_0"
+        "-fa", "on",
+        "-ctk", str(ctk),
+        "-ctv", str(ctv)
     ]
 
     if "mmproj" in cfg:
@@ -38,18 +49,33 @@ def build_command(cfg, config):
     if "model-draft" in cfg:
         cmd += ["--model-draft", str(model_dir / cfg["model-draft"])]
 
-
     if cfg.get("mtp", False) or "model-draft" in cfg:
-        cmd += ["--spec-type", "draft-mtp", "--spec-draft-n-max", "2"]
+        spec_n_max = cfg.get("spec_draft_n_max", 2)
+        cmd += ["--spec-type", "draft-mtp", "--spec-draft-n-max", str(spec_n_max)]
 
     return cmd
 
 
 def main():
-    config = load_config()
+    parser = argparse.ArgumentParser(description="Run llama-server with pre-configured models.")
+    parser.add_argument(
+        "--machine",
+        type=str,
+        default=None,
+        help="Machine identifier to load config-<machine>.json and models-<machine>.json",
+    )
+    args = parser.parse_args()
 
-    with open(MODELS_FILE, "r") as f:
-        models = json.load(f)
+    base_dir = Path(__file__).parent
+    if args.machine:
+        config_file = base_dir / f"config-{args.machine}.json"
+        models_file = base_dir / f"models-{args.machine}.json"
+    else:
+        config_file = base_dir / "config.json"
+        models_file = base_dir / "models.json"
+
+    config = load_config(config_file)
+    models = load_models(models_file)
 
     print("\nModelos disponibles:\n")
 

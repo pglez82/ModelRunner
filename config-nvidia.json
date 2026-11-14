@@ -1,0 +1,6 @@
+{
+    "model_dir": "/media/nas/pgonzalez/llama.cpp/models",
+    "llama_server": "/media/nas/pgonzalez/llama.cpp/build/bin/llama-server",
+    "port": 8081,
+    "default_context": 32768
+}

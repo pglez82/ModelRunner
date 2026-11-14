@@ -64,10 +64,20 @@ Run the main script:
 python3 run_model.py
 ```
 
+### Multi-machine Support
+
+You can specify a target machine using the `--machine` option:
+
+```bash
+python3 run_model.py --machine nvidia
+```
+
+When `--machine <name>` is provided, `run_model.py` loads `config-<name>.json` and `models-<name>.json` instead of the default `config.json` and `models.json`.
+
 A menu will appear in your terminal. Select the number corresponding to the model you wish to run, and the `llama-server` will be launched with the appropriate configuration.
 
 ## File Structure
 
 - `run_model.py`: The main execution script.
-- `config.json`: Global configuration (paths, defaults, environment).
-- `models.json`: List of available models and their specific settings.
+- `config.json` (or `config-<machine>.json`): Global configuration (paths, defaults, environment).
+- `models.json` (or `models-<machine>.json`): List of available models and their specific settings.
