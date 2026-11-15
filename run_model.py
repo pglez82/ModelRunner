@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -30,12 +31,13 @@ def build_command(cfg, config):
     ngl = cfg.get("ngl", config.get("default_ngl", "999"))
     ctk = cfg.get("ctk", config.get("default_ctk", "q8_0"))
     ctv = cfg.get("ctv", config.get("default_ctv", "q8_0"))
+    load_mode = cfg.get("load_mode", config.get("load_mode", "auto"))
 
     cmd = [
         config["llama_server"],
         "-ngl", str(ngl),
         "-np", "1",
-        "--no-mmap",
+        "--load-mode", str(load_mode),
         "--host", str(host),
         "--port", str(port),
         "--n-cpu-moe", str(cfg.get("n_cpu_moe", default_n_cpu_moe)),
@@ -46,13 +48,28 @@ def build_command(cfg, config):
         "-ctv", str(ctv)
     ]
 
+    threads = cfg.get("threads", config.get("threads"))
+    if threads is not None:
+        cmd += ["-t", str(threads)]
+
+    threads_batch = cfg.get("threads_batch", config.get("threads_batch"))
+    if threads_batch is not None:
+        cmd += ["-tb", str(threads_batch)]
+
+    ubatch = cfg.get("ubatch_size", config.get("ubatch_size"))
+    if ubatch is not None:
+        cmd += ["-ub", str(ubatch)]
+
+    if "spec_draft_n_cpu_moe" in cfg:
+        cmd += ["--spec-draft-n-cpu-moe", str(cfg["spec_draft_n_cpu_moe"])]
+
     if "mmproj" in cfg:
         cmd += ["--mmproj", str(model_dir / cfg["mmproj"])]
     if "model-draft" in cfg:
         cmd += ["--model-draft", str(model_dir / cfg["model-draft"])]
 
     if cfg.get("mtp", False) or "model-draft" in cfg:
-        spec_n_max = cfg.get("spec_draft_n_max", 2)
+        spec_n_max = cfg.get("spec_draft_n_max", 3)
         cmd += ["--spec-type", "draft-mtp", "--spec-draft-n-max", str(spec_n_max)]
 
     return cmd
@@ -110,7 +127,7 @@ def main():
     choice = int(input("\nSelecciona modelo: "))
     cfg = models[choice - 1]
 
-    env = {**config.get("env", {})}
+    env = {**os.environ, **config.get("env", {})}
     if "gpus" in cfg:
         env["CUDA_VISIBLE_DEVICES"] = cfg["gpus"]
 
