@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Qwen3.8 27B (1 GPU, MTP)",
+    "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+    "gpus": "1",
+    "mtp": true,
+    "spec_draft_n_max": 1,
+    "context": 128000
+  },
+  {
+    "name": "Qwen3.8 27B (1 GPU, Vision, MTP)",
+    "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+    "gpus": "1",
+    "mmproj": "mmproj-F16.gguf",
+    "mtp": true,
+    "spec_draft_n_max": 1,
+    "context": 128000
+  }
+]
