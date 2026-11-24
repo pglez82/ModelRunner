@@ -21,6 +21,65 @@ def load_models(models_file):
     with open(models_file, "r") as f:
         return json.load(f)
 
+# Queries nvidia-smi and returns (all_gpu_indexes, busy) where busy maps
+# GPU index -> list of running processes. Returns None if nvidia-smi is unavailable.
+def query_gpu_status():
+    try:
+        gpu_info = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index,uuid", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, check=True).stdout
+        apps = subprocess.run(
+            ["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory,gpu_uuid",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, check=True).stdout
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        print("Advertencia: no se pudo consultar nvidia-smi; se omite la comprobación de GPU.")
+        return None
+
+    all_gpus = []
+    uuid_to_index = {}
+    for line in gpu_info.strip().splitlines():
+        idx, uuid = [f.strip() for f in line.split(",")]
+        all_gpus.append(idx)
+        uuid_to_index[uuid] = idx
+
+    busy = {}
+    for line in apps.strip().splitlines():
+        pid, name, mem, uuid = [f.strip() for f in line.split(",")]
+        busy.setdefault(uuid_to_index.get(uuid, "?"), []).append(
+            f"{name} (PID {pid}, {mem} MiB)")
+
+    return all_gpus, busy
+
+# Checks that the requested GPUs are free of running processes; exits with an error if not.
+def check_gpus_free(gpus):
+    status = query_gpu_status()
+    if status is None:
+        return
+    _, busy = status
+
+    for gpu in gpus.split(","):
+        procs = busy.get(gpu.strip())
+        if procs:
+            print(f"Error: La GPU {gpu.strip()} está ocupada por: {', '.join(procs)}")
+            sys.exit(1)
+
+
+# For a single-GPU model whose GPU is busy, finds the first free GPU among the
+# rest of the machine. Returns the fallback index or None if no free GPU exists.
+def find_free_fallback_gpu(gpu, status):
+    all_gpus, busy = status
+    procs = busy.get(gpu)
+    if not procs:
+        return None
+    print(f"Advertencia: La GPU {gpu} está ocupada por: {', '.join(procs)}")
+    for candidate in all_gpus:
+        if candidate != gpu and not busy.get(candidate):
+            return candidate
+    print("Error: No hay ninguna otra GPU libre para usar como alternativa.")
+    return None
+
+
 # Builds the command to run the llama server based on the model configuration and global configuration.
 def build_command(cfg, config):
     model_dir = Path(config["model_dir"])
@@ -83,6 +142,20 @@ def main():
         default=None,
         help="Machine identifier to load config-<machine>.json and models-<machine>.json",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        metavar="MODEL",
+        help="Model to launch directly: index (e.g. '1') or substring of the model name. "
+             "Skips the interactive selection.",
+    )
+    parser.add_argument(
+        "--gpu-fallback",
+        action="store_true",
+        help="If a single-GPU model has its GPU busy, run it on another free GPU "
+             "instead of failing.",
+    )
     args = parser.parse_args()
 
     base_dir = Path(__file__).parent
@@ -119,17 +192,45 @@ def main():
     config = load_config(config_file)
     models = load_models(models_file)
 
-    print("\nModelos disponibles:\n")
+    def select_model():
+        print("\nModelos disponibles:\n")
+        for i, m in enumerate(models, start=1):
+            print(f"{i}) {m['name']}")
 
-    for i, m in enumerate(models, start=1):
-        print(f"{i}) {m['name']}")
+        choice = int(input("\nSelecciona modelo: "))
+        return models[choice - 1]
 
-    choice = int(input("\nSelecciona modelo: "))
-    cfg = models[choice - 1]
+    if args.model is None:
+        cfg = select_model()
+    else:
+        if args.model.isdigit():
+            idx = int(args.model) - 1
+            if not 0 <= idx < len(models):
+                sys.exit(f"Error: Índice de modelo inválido: {args.model} (1-{len(models)})")
+            cfg = models[idx]
+        else:
+            matches = [m for m in models if args.model.lower() in m["name"].lower()]
+            if not matches:
+                sys.exit(f"Error: Ningún modelo coincide con: {args.model}")
+            if len(matches) > 1:
+                print("Varios modelos coinciden:")
+                for m in matches:
+                    print(f"  - {m['name']}")
+                sys.exit("Error: Usa un término más específico o un índice.")
+            cfg = matches[0]
 
     env = {**os.environ, **config.get("env", {})}
     if "gpus" in cfg:
-        env["CUDA_VISIBLE_DEVICES"] = cfg["gpus"]
+        gpus = cfg["gpus"]
+        if args.gpu_fallback and len(gpus.split(",")) == 1:
+            status = query_gpu_status()
+            if status is not None:
+                fallback = find_free_fallback_gpu(gpus.strip(), status)
+                if fallback is not None:
+                    print(f"Lanzando el modelo en la GPU {fallback} en lugar de la GPU {gpus.strip()}.")
+                    gpus = fallback
+        check_gpus_free(gpus)
+        env["CUDA_VISIBLE_DEVICES"] = gpus
 
     print(f"\nLanzando: {cfg['name']}\n")
     cmd = build_command(cfg, config)
